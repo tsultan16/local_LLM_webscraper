@@ -1,6 +1,6 @@
 ## AI-powered webpage Scraper/Parser
 
-We use Playwright to scrape text from and take screenshots of webpages.
+We use Playwright to scrape text from webpages and take screenshots.
 
 Then local LLMs (running with Ollama) are used to parse the scraped text and screenshots to extract relevant information.
 
