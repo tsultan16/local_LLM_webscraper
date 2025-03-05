@@ -6,8 +6,8 @@ import llmParserVision from "./llmParserVision.js";
 const count = (s) => s.trim().split(/\s+/).length;
 const estimate_tokens = (s) => s.length / 3.5;
 
-// const url = "https://www.bloomtools.com/blog/top-2023-australia-website-directories-you-should-get-your-business-listed-on"
-const url = "https://www.mindmingles.com/directory-submission-sites/"
+const url = "https://www.bloomtools.com/blog/top-2023-australia-website-directories-you-should-get-your-business-listed-on"
+// const url = "https://www.mindmingles.com/directory-submission-sites/"
 
 
 // test text scraping
@@ -39,6 +39,6 @@ async function findBusinessDirectories() {
 
 
 // test screenshot capture
-const chunkImagePaths = await scraper.getScreenshot(url);
-await llmParserVision.parsePageScreenshot(chunkImagePaths);
+const screenshotPath = await scraper.getScreenshot(url);
+await llmParserVision.parsePageScreenshot(screenshotPath);
 

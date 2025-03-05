@@ -1,8 +1,7 @@
 import { chromium } from 'playwright';
 import fetch from 'node-fetch';
 // import cheerio from 'cheerio';
-import sharp from 'sharp';
-
+import fs from 'fs';
 
 async function processElement(element) {
     return await element.evaluate(node => {
@@ -164,57 +163,7 @@ async function scrape(url, getHyperLinks = false) {
 }
 
 
-
-async function splitImageVertically(imagePath, chunkHeight) {
-    const metadata = await sharp(imagePath).metadata(); 
-    const imageHeight = metadata.height;
-    const imageWidth = metadata.width;
-
-    const numChunks = Math.ceil(imageHeight / chunkHeight);
-    const chunkImagePaths = [];
-    let currentY = 0;
-
-    console.log(`Image Dimensions: ${imageWidth}x${imageHeight}, Chunk Height: ${chunkHeight}, Num Chunks: ${numChunks}`);
-
-    for (let i = 0; i < numChunks; i++) {
-        const startY = currentY;
-        let currentChunkHeight = chunkHeight;
-        const remainingHeight = imageHeight - startY;
-        if (remainingHeight < chunkHeight) {
-            currentChunkHeight = remainingHeight;
-        }
-
-        if (currentChunkHeight <= 0) {
-            console.log(`Stopping chunking: currentChunkHeight became <= 0 (remainingHeight=${remainingHeight}, startY=${startY}, imageHeight=${imageHeight}).`);
-            break;
-        }
-
-        const chunkOutputPath = `./screenshots/chunk_${i + 1}.png`;
-
-        console.log(`Chunk ${i + 1}: startY=${startY}, currentChunkHeight=${currentChunkHeight}, imageHeight=${imageHeight}`);
-
-        try {
-            // Create a NEW sharp object for each chunk extraction
-            const image = sharp(imagePath); 
-
-            await image // Use the new image object for extraction
-                .extract({ left: 0, top: startY, width: imageWidth, height: currentChunkHeight })
-                .toFile(chunkOutputPath);
-
-            chunkImagePaths.push(chunkOutputPath);
-            console.log(`Chunk ${i + 1} saved to ${chunkOutputPath} (height: ${currentChunkHeight}px)`);
-        } catch (extractError) {
-            console.error(`Error extracting chunk ${i + 1}:`, extractError);
-        }
-
-        currentY += currentChunkHeight;
-    }
-
-    return chunkImagePaths;
-}
-
-
-async function getScreenshot(url, chunkHeight=1024) {
+async function getScreenshot(url) {
     const browser = await chromium.launch({
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
@@ -232,23 +181,20 @@ async function getScreenshot(url, chunkHeight=1024) {
 
         console.log(`Page Dimensions (scrollWidth x scrollHeight): ${pageDimensions.width}px x ${pageDimensions.height}px`);
 
+        // clear out any previous screenshots folder
+        fs.rmSync('./screenshot', { recursive: true, force: true }); 
+
         // Take full page screenshot and save to file
         const screenshotPath = './screenshots/screenshot.png';
         await page.screenshot({ path: screenshotPath, fullPage: true });
         console.log(`Full page screenshot saved to ${screenshotPath}`);
-
-        // split the full page screenshot along y into equal height chunks
-        const chunkImagePaths = await splitImageVertically(screenshotPath, chunkHeight);
-        console.log(`Screenshot split into ${chunkImagePaths.length} chunks.`);
-        return chunkImagePaths; 
+        return screenshotPath; 
 
     } catch (error) {
         console.error('Error during screenshot or description:', error);
     } finally {
         await browser.close();
     }
-
-
 } 
 
 
