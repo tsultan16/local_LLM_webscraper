@@ -9,6 +9,7 @@ As an example use-case, we attempt to use our technique to extract business dire
 To run the project, clone the repo then run:
 ```shell
 npm install
+npm start
 ```
 
 We have two separate LLM parsers, one for scraped text and another for the screenshots.
