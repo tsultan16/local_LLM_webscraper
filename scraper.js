@@ -152,31 +152,105 @@ async function scrape(url, getHyperLinks = false) {
     const urlToScrape = url;
     let scrapedText = undefined
     try {
-        // if (withLinks) {
-        //     scrapedText = await scrapeWebpageWithPlaywrightLinks(urlToScrape);
-        // } else {            
-        //     scrapedText = await scrapeWebpageWithPlaywright(urlToScrape);
-        //     // scrapedText = await scrapeWebpageWithCheerio(urlToScrape);
-        // }
-
-        scrapedText = await scrapeWebpageWithPlaywright(urlToScrape, getHyperLinks);
-        
+        scrapedText = await scrapeWebpageWithPlaywright(urlToScrape, getHyperLinks);        
         if (scrapedText) {
-
             // Replace more than 2 consecutive newlines with an empty string
             scrapedText = scrapedText.replace(/\n{2,}/g, '');
-
-            // console.log("Scraped Text Content:\n", scrapedText);
-
         }
     } catch (error) {
         console.error("Scraping failed due to potential blocking:", error.message);
-        // Handle the blocking error here - e.g., log the URL, retry with different settings, etc.
     } 
-
     return scrapedText;
 }
 
 
 
-export default { scrape };
+async function splitImageVertically(imagePath, chunkHeight) {
+    const metadata = await sharp(imagePath).metadata(); 
+    const imageHeight = metadata.height;
+    const imageWidth = metadata.width;
+
+    const numChunks = Math.ceil(imageHeight / chunkHeight);
+    const chunkImagePaths = [];
+    let currentY = 0;
+
+    console.log(`Image Dimensions: ${imageWidth}x${imageHeight}, Chunk Height: ${chunkHeight}, Num Chunks: ${numChunks}`);
+
+    for (let i = 0; i < numChunks; i++) {
+        const startY = currentY;
+        let currentChunkHeight = chunkHeight;
+        const remainingHeight = imageHeight - startY;
+        if (remainingHeight < chunkHeight) {
+            currentChunkHeight = remainingHeight;
+        }
+
+        if (currentChunkHeight <= 0) {
+            console.log(`Stopping chunking: currentChunkHeight became <= 0 (remainingHeight=${remainingHeight}, startY=${startY}, imageHeight=${imageHeight}).`);
+            break;
+        }
+
+        const chunkOutputPath = `./screenshots/chunk_${i + 1}.png`;
+
+        console.log(`Chunk ${i + 1}: startY=${startY}, currentChunkHeight=${currentChunkHeight}, imageHeight=${imageHeight}`);
+
+        try {
+            // Create a NEW sharp object for each chunk extraction
+            const image = sharp(imagePath); 
+
+            await image // Use the new image object for extraction
+                .extract({ left: 0, top: startY, width: imageWidth, height: currentChunkHeight })
+                .toFile(chunkOutputPath);
+
+            chunkImagePaths.push(chunkOutputPath);
+            console.log(`Chunk ${i + 1} saved to ${chunkOutputPath} (height: ${currentChunkHeight}px)`);
+        } catch (extractError) {
+            console.error(`Error extracting chunk ${i + 1}:`, extractError);
+        }
+
+        currentY += currentChunkHeight;
+    }
+
+    return chunkImagePaths;
+}
+
+
+async function getScreenshot(url, chunkHeight=1024) {
+    const browser = await chromium.launch({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
+    const page = await browser.newPage();
+
+    try {
+        const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+        const pageDimensions = await page.evaluate(() => {
+            return {
+                width: document.documentElement.scrollWidth,
+                height: document.documentElement.scrollHeight,
+            };
+        });
+
+        console.log(`Page Dimensions (scrollWidth x scrollHeight): ${pageDimensions.width}px x ${pageDimensions.height}px`);
+
+        // Take full page screenshot and save to file
+        const screenshotPath = './screenshots/screenshot.png';
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        console.log(`Full page screenshot saved to ${screenshotPath}`);
+
+        // split the full page screenshot along y into equal height chunks
+        const chunkImagePaths = await splitImageVertically(screenshotPath, chunkHeight);
+        console.log(`Screenshot split into ${chunkImagePaths.length} chunks.`);
+        return chunkImagePaths; 
+
+    } catch (error) {
+        console.error('Error during screenshot or description:', error);
+    } finally {
+        await browser.close();
+    }
+
+
+} 
+
+
+
+export default { scrape, getScreenshot };
