@@ -1,7 +1,7 @@
 import scraper from "./scraper.js";
 import google from "./searchEngine.js";
 import llmParserText from "./llmParserText.js";
-
+import llmParserVision from "./llmParserVision.js";
 
 const count = (s) => s.trim().split(/\s+/).length;
 const estimate_tokens = (s) => s.length / 3.5;
@@ -11,21 +11,17 @@ const url = "https://www.mindmingles.com/directory-submission-sites/"
 
 
 // test text scraping
-const scrapedText = await scraper.scrape(url, true);
-if (!scrapedText) {
-    console.log("Failed to scrape webpage!")
-    process.exit()
-}
+// const scrapedText = await scraper.scrape(url, true);
+// if (!scrapedText) {
+//     console.log("Failed to scrape webpage!")
+//     process.exit()
+// }
 //console.log(scrapedText)
 
-console.log()
-console.log("approx word count: ", count(scrapedText))
-console.log("approx token count: ", estimate_tokens(scrapedText))
-console.log()
-
-
-// test screenshot capture
-// const chunkImagePaths = await scraper.getScreenshot(url);
+// console.log()
+// console.log("approx word count: ", count(scrapedText))
+// console.log("approx token count: ", estimate_tokens(scrapedText))
+// console.log()
 
 
 // test google search
@@ -38,5 +34,11 @@ async function findBusinessDirectories() {
 
 // findBusinessDirectories()
 
+// await llmParserText.parsePageText(scrapedText);
 
-await llmParserText.parsePageText(scrapedText);
+
+
+// test screenshot capture
+const chunkImagePaths = await scraper.getScreenshot(url);
+await llmParserVision.parsePageScreenshot(chunkImagePaths);
+
